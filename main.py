@@ -1,4 +1,4 @@
-#The tokenize part of the NLP 
+# the tokenize part of the NLP 
 from collections import Counter
 from collections import defaultdict
 import re
@@ -85,22 +85,46 @@ class BigramModel:
         bigram = (word1, word2)
         return self.bigram_counts[bigram] / self.unigram_counts[word1] if self.unigram_counts[word1] > 0 else 0
 
+# laplace smoothing unigram
+class LaplaceUnigramModel:
+    def __init__(self):
+        self.unigram_counts = defaultdict(int)
+        self.total_words = 0
+        self.vocab_size = 0
+
+    def train(self, corpus):
+        self.unigram_counts = count_words(corpus)
+        self.total_words = sum(self.unigram_counts.values())
+        self.vocab_size = len(self.unigram_counts)
+
+    def probability(self, word):
+        return (self.unigram_counts[word] + 1) / (self.total_words + self.vocab_size)
+
+# load training data
 train_data = load_data("A1_DATASET/train.txt")
 word_counts = count_words(train_data)
 
 #initializing unigram and bigram
 uniModel = UnigramModel()
 biModel = BigramModel()
+laplaceUniModel = LaplaceUnigramModel()
 uniModel.train(train_data)
 biModel.train(train_data)
+laplaceUniModel.train(train_data)
 
-#testing here
-print(uniModel.probability("the"))
-print(uniModel.total_words)
+# unigram model test
+print("Unigram probability of 'the':", uniModel.probability("the"))
+print("Unigram total words:", uniModel.total_words)
 
-print(biModel.probability('the', 'hotel'))
-print(biModel.total_bigrams)
+# bigram model test
+print("Bigram probability of 'the':", biModel.probability('the', 'hotel'))
+print("Bigram total bigrams:", biModel.total_bigrams)
+
+# laplace smoothing unigram model test
+print("Laplace unigram probability of 'the':", laplaceUniModel.probability("the"))
+print("Laplace total words:", laplaceUniModel.total_words)
 
 #print(uniModel.unigram_counts)
-print(biModel.bigram_counts)
-print(sorted(biModel.bigram_counts.items(), key=lambda x: x[1], reverse=True)[:5])
+#print(biModel.bigram_counts)
+print(laplaceUniModel.unigram_counts)
+#print(sorted(biModel.bigram_counts.items(), key=lambda x: x[1], reverse=True)[:5])
