@@ -4,22 +4,25 @@ from collections import defaultdict
 import math
 import re
 
-def load_data(filepath):
+def load_data(filepath, vocab=None, min_freq=1):
     # read data from file line by line, as each line corresponds to a review
     with open(filepath, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     # preprocess the reviews
-    return preprocess_text(lines)
+    return preprocess_text(lines, vocab, min_freq)
 
 # to deal with the non-alphabetical characters and case sensitivity
 #TODO: implement the rest of the preprocessing
-def preprocess_text(lines):
+def preprocess_text(lines, vocab=None, min_freq=1):
     processed_lines = []
+    word_counts = Counter()
+
     rating_pattern = r'\b(one|two|three|four|five|[1-5])[-\s]?stars?\b'
     date_pattern = r'\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b'
     price_pattern = r'\$\d+(\.\d{1,2})?'
     distances_pattern = r'\b\d+(\.\d+)?\s?(miles|mile|km|kilometers|meters|m)\b'
+
     for line in lines:
         # turn everything to lower case
         line = line.lower()
@@ -39,9 +42,17 @@ def preprocess_text(lines):
         # remove all non-alphabetical characters
         line = re.sub(r'[^a-z\s]', '', line)
 
-        processed_lines.append(line.split())
+        words = line.split()
+        word_counts.update(words)
+        processed_lines.append(words)
+
+    if vocab is None:
+        vocab = {word for word, count in word_counts.items() if count >= min_freq}
+        vocab.add('<UNK>')
+
+    processed_lines = [[word if word in vocab else '<UNK>' for word in line] for line in processed_lines]
     
-    return processed_lines
+    return processed_lines, vocab
 
 def count_words(corpus):
     word_counts = Counter(word for sentence in corpus for word in sentence)
@@ -137,8 +148,7 @@ class KneserNeyBigramModel:
             return 0
 
 #Perplexity for unigram
-def unigram_perplexity(model, file):
-    corpus = load_data(file)
+def unigram_perplexity(model, corpus):
     totalProbabilityLog = 0
     totalWords = 0
 
@@ -151,30 +161,42 @@ def unigram_perplexity(model, file):
     return 2 ** -(totalProbabilityLog / totalWords) if totalWords > 0 else float("inf")
 
 #Perplexity for bigram
-def bigram_perplexity_k(model, file, k):
-    corpus = load_data(file)
+def bigram_perplexity_k(model, corpus, k):
     totalProbabilityLog = 0
     totalBigrams = 0
 
     for i in corpus:
-        sentenceLogProb = 0
         for j in range(len(i) - 1):
             word1 = i[j]
             word2 = i[j + 1]
             totalBigrams += 1
             sentenceLogProb = model.smooth_probability(word1, word2, k)
             totalProbabilityLog += math.log2(sentenceLogProb)
+    return 2 ** -(totalProbabilityLog / totalBigrams) if totalBigrams > 0 else float("inf")
+
+# perplexity for kneser-ney bigram
+def bigram_kneser_perplexity(model, corpus, epsilon=1e-10):
+    totalProbabilityLog = 0
+    totalBigrams = 0
+
+    for i in corpus:
+        for j in range(len(i) - 1):
+            word1 = i[j]
+            word2 = i[j + 1]
             totalBigrams += 1
+            sentenceLogProb = model.probability(word1, word2)
+            if sentenceLogProb > 0:
+                totalProbabilityLog += math.log2(sentenceLogProb + epsilon)
+            else:
+                totalProbabilityLog += math.log2(epsilon)
     return 2 ** -(totalProbabilityLog / totalBigrams) if totalBigrams > 0 else float("inf")
 
 
-
-
 # load training data
-train_data = load_data("A1_DATASET/train.txt")
+train_data, vocab = load_data("A1_DATASET/train.txt", min_freq=2)
 word_counts = count_words(train_data)
 
-#initializing unigram and bigram
+# initializing unigram and bigram
 uniModel = UnigramModel()
 biModel = BigramModel()
 laplaceUniModel = LaplaceUnigramModel()
@@ -209,17 +231,20 @@ print("Kneser-Ney total bigrams:", KneserNeyBiModel.total_bigrams)
 print("\n")
 
 print("---  PERPLEXITY TEST  ---")
+# load validation data
+val_data, _ = load_data("A1_DATASET/val.txt", vocab=vocab)
+
 # unigram perplexity with val.txt
-print("Unigram perplexity of \"val.txt\", laplace smoothed:", unigram_perplexity(laplaceUniModel, "A1_DATASET/val.txt"))
+print("Unigram perplexity of \"val.txt\", laplace smoothed:", unigram_perplexity(laplaceUniModel, val_data))
 
 # Bigram perplexity with val.txt
-print("Bigram perplexity of \"val.txt\", k = 0.01 smoothed:", bigram_perplexity_k(biModel, "A1_DATASET/val.txt", 0.01))
-print("Bigram perplexity of \"val.txt\", k = 0.1 smoothed:", bigram_perplexity_k(biModel, "A1_DATASET/val.txt", 0.1))
-print("Bigram perplexity of \"val.txt\", k = 1 smoothed:", bigram_perplexity_k(biModel, "A1_DATASET/val.txt", 1))
-print("Bigram perplexity of \"val.txt\", k = 5 smoothed:", bigram_perplexity_k(biModel, "A1_DATASET/val.txt", 5))
+print("Bigram perplexity of \"val.txt\", k = 0.01 smoothed:", bigram_perplexity_k(biModel, val_data, 0.01))
+print("Bigram perplexity of \"val.txt\", k = 0.1 smoothed:", bigram_perplexity_k(biModel, val_data, 0.1))
+print("Bigram perplexity of \"val.txt\", k = 1 smoothed:", bigram_perplexity_k(biModel, val_data, 1))
+print("Bigram perplexity of \"val.txt\", k = 5 smoothed:", bigram_perplexity_k(biModel, val_data, 5))
 
-# kneser-ney Bigram perplexity with val.txt //not implemented yet
-#print("")
+# kneser-ney Bigram perplexity with val.txt
+print("Bigram kneser-ney perplexity of \"val.txt\", :", bigram_kneser_perplexity(KneserNeyBiModel, val_data))
 
 #printing output, just uncomment/comment a line to see specific output of a model
 #print(uniModel.unigram_counts)
