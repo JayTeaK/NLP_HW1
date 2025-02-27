@@ -245,10 +245,3 @@ print("Bigram perplexity of \"val.txt\", k = 5 smoothed:", bigram_perplexity_k(b
 
 # kneser-ney Bigram perplexity with val.txt
 print("Bigram kneser-ney perplexity of \"val.txt\", :", bigram_kneser_perplexity(KneserNeyBiModel, val_data))
-
-#printing output, just uncomment/comment a line to see specific output of a model
-#print(uniModel.unigram_counts)
-#print(biModel.bigram_counts)
-#print(laplaceUniModel.unigram_counts)
-#print(KneserNeyBigramModel.bigram_counts)
-#print(sorted(biModel.bigram_counts.items(), key=lambda x: x[1], reverse=True)[:5])
