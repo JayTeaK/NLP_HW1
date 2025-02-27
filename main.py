@@ -160,7 +160,7 @@ def unigram_perplexity(model, corpus):
     return 2 ** -(totalProbabilityLog / totalWords) if totalWords > 0 else float("inf")
 
 # perplexity for bigram
-def bigram_perplexity_k(model, corpus, k):
+def bigram_perplexity_k(model, corpus, k, epsilon=1e-10):
     totalProbabilityLog = 0
     totalBigrams = 0
 
@@ -170,7 +170,10 @@ def bigram_perplexity_k(model, corpus, k):
             word2 = i[j + 1]
             totalBigrams += 1
             sentenceLogProb = model.smooth_probability(word1, word2, k)
-            totalProbabilityLog += math.log2(sentenceLogProb)
+            if sentenceLogProb > 0:
+                totalProbabilityLog += math.log2(sentenceLogProb + epsilon)
+            else:
+                totalProbabilityLog += math.log2(epsilon)
     return 2 ** -(totalProbabilityLog / totalBigrams) if totalBigrams > 0 else float("inf")
 
 # perplexity for kneser-ney bigram
@@ -232,6 +235,12 @@ print("\n")
 print("---  PERPLEXITY TEST  ---")
 # load validation data
 val_data, _ = load_data("A1_DATASET/val.txt", vocab=vocab)
+
+print("\n")
+print("-Validation Unsmoothed-")
+print("Unigram perplexity of \"val.txt\":", unigram_perplexity(uniModel, val_data))
+print("Bigram perplexity of \"val.txt\":", bigram_perplexity_k(biModel, val_data, 0))
+print("\n")
 
 # unigram perplexity with val.txt
 print("Unigram perplexity of \"val.txt\", laplace smoothed:", unigram_perplexity(laplaceUniModel, val_data))
