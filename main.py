@@ -13,7 +13,6 @@ def load_data(filepath, vocab=None, min_freq=1):
     return preprocess_text(lines, vocab, min_freq)
 
 # to deal with the non-alphabetical characters and case sensitivity
-#TODO: implement the rest of the preprocessing
 def preprocess_text(lines, vocab=None, min_freq=1):
     processed_lines = []
     word_counts = Counter()
@@ -147,7 +146,7 @@ class KneserNeyBigramModel:
         else:
             return 0
 
-#Perplexity for unigram
+# perplexity for unigram
 def unigram_perplexity(model, corpus):
     totalProbabilityLog = 0
     totalWords = 0
@@ -160,7 +159,7 @@ def unigram_perplexity(model, corpus):
         totalWords += len(i)
     return 2 ** -(totalProbabilityLog / totalWords) if totalWords > 0 else float("inf")
 
-#Perplexity for bigram
+# perplexity for bigram
 def bigram_perplexity_k(model, corpus, k):
     totalProbabilityLog = 0
     totalBigrams = 0
@@ -237,7 +236,7 @@ val_data, _ = load_data("A1_DATASET/val.txt", vocab=vocab)
 # unigram perplexity with val.txt
 print("Unigram perplexity of \"val.txt\", laplace smoothed:", unigram_perplexity(laplaceUniModel, val_data))
 
-# Bigram perplexity with val.txt
+# bigram perplexity with val.txt
 print("Bigram perplexity of \"val.txt\", k = 0.01 smoothed:", bigram_perplexity_k(biModel, val_data, 0.01))
 print("Bigram perplexity of \"val.txt\", k = 0.1 smoothed:", bigram_perplexity_k(biModel, val_data, 0.1))
 print("Bigram perplexity of \"val.txt\", k = 1 smoothed:", bigram_perplexity_k(biModel, val_data, 1))
